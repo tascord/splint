@@ -32,7 +32,6 @@ fn lint(loc: String, rules: Rules) {
         .collect::<Vec<Named>>();
 
     test(rules, named, input.to_string(), loc);
-    let took = start.elapsed();
 }
 
 fn parse(tt: TokenTree) -> Vec<Named> {
