@@ -20,7 +20,7 @@ splint -r <rules.json> src/**/*.rs # Splint only works on rust files
 ### Rules
 The following rule looks for a sequence of `.unwrap()` anywhere in the file.  
 You don't need to worry about whitespace, as it uses a parsed stream of tokens from proc_macro2.
-```json
+```jsonc
 {
     "rules": {
         "Disallow Unwrap": {
@@ -34,7 +34,7 @@ You don't need to worry about whitespace, as it uses a parsed stream of tokens f
         /* Pattern Index */                                     "end": 3
                                                             },
         /* Type/Value matching */                           "pattern": [
-        /* Type is one of Puct/Ident/Delim */                   ["Punct", "."],
+        /* Type is one of Punct/Ident/Delim */                  ["Punct", "."],
         /* Where Punctuation handles punctuation, */            ["Ident", "unwrap"],
         /* Delim brackets, and Ident other strings/ */          ["Delim", "("],
         /* Regex in value is defined by surrounding '/' */      ["Delim", ")"]

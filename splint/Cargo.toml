@@ -2,13 +2,23 @@
 edition = "2021"
 name = "splint"
 version = "0.1.0"
+license = "MIT"
+repository = "https://github.com/tascord/splint"
+homepage = "https://github.com/tascord/splint"
+readme = "../README.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[[bin]]
+name="splint"
+path="src/main.rs"
 
 [dependencies]
 clap = { version = "4.5.4", features = ["derive"] }
 glob = "0.3.1"
+itertools = "0.13.0"
 miette = {version = "7.2.0", features = ["fancy"]}
+owo-colors = "4.0.0"
 proc-macro2 = {version = "1.0.83", features = ["span-locations"]}
 regex = "1.10.4"
 serde = {version = "1.0.202", features = ["derive"]}

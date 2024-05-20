@@ -1,7 +1,9 @@
 use clap::Parser;
-use miette::{bail, miette, NamedSource, Report};
+use itertools::Itertools;
+use miette::{miette, NamedSource, Report};
+use owo_colors::OwoColorize;
 use proc_macro2::TokenTree;
-use std::{convert::Infallible, fs, str::FromStr};
+use std::{fs, io::Error, str::FromStr, time::Instant};
 use ty::{LintError, Named};
 
 use crate::ty::Rules;
@@ -47,21 +49,37 @@ pub fn main() -> miette::Result<()> {
         }
     });
 
+    let s = Instant::now();
     let (total, fails) = files
-        .map(|loc| {
-            lint(loc, r.clone())
-                .map_err::<Result<_, Report>>(|e, _| bail!(e))
-                .unwrap()
-        })
+        .map(|loc| lint(loc, r.clone()))
+        .try_collect::<(usize, usize), Vec<_>, std::io::Error>()
+        .map_err(|e| miette!("Couldn't read source file: {:?}", e))?
+        .into_iter()
         .reduce(|a, b| (a.0 + b.0, a.1 + b.1))
         .unwrap();
+
+    if !args.quiet {
+        println!(
+            "{}, {}",
+            format!("{fails} fails").red(),
+            format!("{} warnings", total - fails).yellow()
+        );
+        println!(
+            "Finished linting {} files in {}ms",
+            total,
+            s.elapsed().as_millis(),
+        );
+    }
+
+    if fails > 0 {
+        std::process::exit(1);
+    }
 
     Ok(())
 }
 
-pub fn lint(loc: String, rules: Rules) -> miette::Result<(usize, usize)> {
-    let input = fs::read_to_string(loc.clone())
-        .map_err(|e| miette!("Couldn't read input file: {:?}", e))?;
+pub fn lint(loc: String, rules: Rules) -> Result<(usize, usize), Error> {
+    let input = fs::read_to_string(loc.clone())?;
     let token_tree = proc_macro2::TokenStream::from_str(&input).unwrap();
     let named = token_tree
         .into_iter()
@@ -106,8 +124,8 @@ fn test(r: Rules, s: Vec<Named>, source: String, file: String) -> (usize, usize)
             source: NamedSource::new(&file, source.clone()),
         });
 
-        eprintln!("{}", re);
+        eprintln!("{re:?}");
     });
 
-    (any.clone().count, any.filter(|a| a.0.fails).count())
+    (any.clone().count(), any.filter(|a| a.0.fails).count())
 }
