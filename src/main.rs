@@ -1,38 +1,38 @@
-use std::{collections::HashMap, str::FromStr};
-
+#![feature(proc_macro_diagnostic)]
+use miette::{NamedSource, Report};
 use proc_macro2::TokenTree;
-use ty::Named;
+use std::{fs, str::FromStr};
+use ty::{LintError, Named};
 
-use crate::ty::{Needle, Rule, Rules};
-
-const INPUT: &str = include_str!("../input.rs");
-// const RULES: &str = include_str!("../rules.toml");
+use crate::ty::Rules;
 
 pub mod ty;
 
 pub fn main() {
-    let token_tree = proc_macro2::TokenStream::from_str(INPUT).unwrap();
+    let r: Rules = serde_json::from_str(include_str!("../rules.json")).unwrap();
+    std::env::args().skip(1).for_each(|loc| {
+        if !loc.contains('*') {
+            lint(loc, r.clone())
+        } else {
+            glob::glob(&loc)
+                .unwrap()
+                .filter_map(Result::ok)
+                .for_each(|p| lint(p.into_os_string().to_str().unwrap().to_string(), r.clone()))
+        }
+    });
+}
+
+fn lint(loc: String, rules: Rules) {
+    let input = fs::read_to_string(loc.clone()).unwrap();
+    let token_tree = proc_macro2::TokenStream::from_str(&input).unwrap();
     let named = token_tree
         .into_iter()
         .map(|tt| parse(tt))
         .flatten()
         .collect::<Vec<Named>>();
 
-    let mut m = HashMap::<String, Rule>::new();
-    m.insert(
-        "Disallow Unwrap".to_string(),
-        Rule(vec![
-            Needle("Ident".to_string(), None),
-            Needle("Punct".to_string(), Some(".".to_string())),
-            Needle("Ident".to_string(), Some("unwrap".to_string())),
-            Needle("Delim".to_string(), Some("(".to_string())),
-            Needle("Delim".to_string(), Some(")".to_string())),
-        ]),
-    );
-
-    let r = Rules { rules: m };
-    test(r, named);
-    // println!("{:?}", toml::from_str::<Rules>(RULES).unwrap());
+    test(rules, named, input.to_string(), loc);
+    let took = start.elapsed();
 }
 
 fn parse(tt: TokenTree) -> Vec<Named> {
@@ -53,23 +53,26 @@ fn parse(tt: TokenTree) -> Vec<Named> {
     }
 }
 
-fn test(r: Rules, s: Vec<Named>) {
+fn test(r: Rules, s: Vec<Named>, source: String, file: String) {
     let any = r
         .rules
         .iter()
-        .map(|(n, v)| (n, v.test(&s)))
+        .map(|(_, v)| (v, v.test(&s)))
         .filter(|(_, r)| r.is_err());
 
     any.clone().for_each(|(n, r)| {
-        println!("Lint {} failed:", n);
-        r.unwrap_err()
-            .iter()
-            .for_each(|e| spanned_er);
-    });
+        let window = r.unwrap_err();
+        let re = Report::new(LintError {
+            window,
+            fails: n.fails,
+            rule: n.clone(),
+            source: NamedSource::new(&file, source.clone()),
+        });
 
-    if any.clone().count() == 0 {
-        println!("Looks good.")
-    } else {
-        panic!("Some lints failed.")
-    }
+        if n.fails {
+            panic!("{:?}", re);
+        } else {
+            println!("{:?}", re)
+        }
+    });
 }

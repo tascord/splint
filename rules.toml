@@ -1,9 +1,0 @@
-[Disallow Unwrap]
-syntax="""Ident Punct(".") Ident("unwrap") Delim("(") Delim(")")"""
-explaination="`.unwrap()` is painful for a few reasons, especially in WASM code."
-fix="""Consider using `?` instead of `.unwrap()`. This will propagate the error up the call stack, and is generally more idiomatic Rust."""
-
-[Prefer gt]
-syntax=">"
-explaination=".gt()"
-fix="""Consider using `?` instead of `.unwrap()`. This will propagate the error up the call stack, and is generally more idiomatic Rust."""
