@@ -1,15 +1,6 @@
-[package]
-edition = "2021"
-name = "glinting"
-version = "0.1.0"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[dependencies]
-glob = "0.3.1"
-miette = {version = "7.2.0", features = ["fancy"]}
-proc-macro2 = {version = "1.0.83", features = ["span-locations"]}
-regex = "1.10.4"
-serde = {version = "1.0.202", features = ["derive"]}
-serde_json = "1.0.117"
-supports-hyperlinks = "3.0.0"
+[workspace]
+resolver = "2"
+members = [
+    "splint",
+    "splint_macro"
+]
