@@ -7,8 +7,9 @@ use std::{fs, io::Error, str::FromStr, time::Instant};
 use ty::{LintError, Named};
 
 use crate::ty::Rules;
-
 pub mod ty;
+
+const RULES_FILES: [&str; 2] = ["splint.json", ".splint.json"];
 
 #[derive(Parser, Debug)]
 #[command(
@@ -16,12 +17,8 @@ pub mod ty;
     about = "A simple linter to avoid pain in your codebases"
 )]
 struct Args {
-    #[arg(
-        short = 'r',
-        required = true,
-        help = "The rules to lint against (.json)"
-    )]
-    rules: String,
+    #[arg(short = 'r', help = "The rules to lint against (.json)")]
+    rules: Option<String>,
     #[arg(name = "FILES", help = "The files to lint")]
     files: Vec<String>,
     #[arg(short = 'q', default_value = "false", help = "Quiet mode")]
@@ -30,8 +27,23 @@ struct Args {
 
 pub fn main() -> miette::Result<()> {
     let args = Args::parse();
+    let rules_path = args.rules.unwrap_or_else(|| {
+        let path = std::env::current_dir().unwrap();
+        RULES_FILES
+            .iter()
+            .map(|f| path.join(f))
+            .find(|f| f.exists())
+            .unwrap_or_else(|| {
+                eprintln!("{:?}", miette!("Couldn't find rules file in current directory. You can specify one with -r"));
+                std::process::exit(1);
+            })
+            .to_str()
+            .unwrap()
+            .to_string()
+    });
+
     let r: Rules = serde_json::from_str(
-        fs::read_to_string(args.rules)
+        fs::read_to_string(rules_path)
             .map_err(|e| miette!("Couldn't get rules: {:?}", e))?
             .as_str(),
     )

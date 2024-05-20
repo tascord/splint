@@ -1,7 +1,7 @@
 [package]
 edition = "2021"
 name = "splint"
-version = "0.1.0"
+version = "0.1.1"
 license = "MIT"
 description = "Custom Rust Linting"
 repository = "https://github.com/tascord/splint"

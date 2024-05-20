@@ -14,20 +14,21 @@
 cargo install splint
 
 # Run splint
-splint -r <rules.json> src/**/*.rs # Splint only works on rust files
+splint [-r <rules.json>] src/**/*.rs # Splint only works on rust files
 ```
 
 ### Rules
 The following rule looks for a sequence of `.unwrap()` anywhere in the file.  
-You don't need to worry about whitespace, as it uses a parsed stream of tokens from proc_macro2.
+You don't need to worry about whitespace, as it uses a parsed stream of tokens from proc_macro2.  
+If no rules file is provided, splint will look for a `.splint.json` or `splint.json` file in the cwd.
 ```jsonc
 {
     "rules": {
         "Disallow Unwrap": {
         /* The name of your lint  */                        "name": "Disallow Unwrap",
         /* Reasoning for the lint */                        "description": "`.unwrap()` should be discouraged where possible, as it leads to less than usefull panics.",
-        /* (optional) Describe a fix or alternative */       "help": "Favour '?' for Results, or handling with unwrap_or(). At the least give some diagnostics with .expect()",
-        /* (optional) Link to more information */            "more": "https://doc.rust-lang.org/std/result/enum.Result.html#method.unwrap",
+        /* (optional) Describe a fix or alternative */      "help": "Favour '?' for Results, or handling with unwrap_or(). At the least give some diagnostics with .expect()",
+        /* (optional) Link to more information */           "more": "https://doc.rust-lang.org/std/result/enum.Result.html#method.unwrap",
         /* Whether or not this lint should panic*/          "fail": false,
         /* The inclusive range highlighted */               "range": {
         /* Pattern Index */                                     "start": 0,
