@@ -146,11 +146,12 @@ pub struct Rules {
     pub rules: HashMap<String, Rule>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct LintError {
     pub rule: Rule,
-    pub window: Vec<Named>,
     pub fails: bool,
+    pub line: (String, usize),
+    pub window: Vec<Named>,
     pub source: NamedSource<String>,
 }
 

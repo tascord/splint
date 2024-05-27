@@ -1,7 +1,7 @@
 [package]
 edition = "2021"
 name = "splint"
-version = "0.1.1"
+version = "0.2.0"
 license = "MIT"
 description = "Custom Rust Linting"
 repository = "https://github.com/tascord/splint"
@@ -15,6 +15,7 @@ name="splint"
 path="src/main.rs"
 
 [dependencies]
+cargo = "0.79.0"
 clap = { version = "4.5.4", features = ["derive"] }
 glob = "0.3.1"
 itertools = "0.13.0"
@@ -22,6 +23,6 @@ miette = {version = "7.2.0", features = ["fancy"]}
 owo-colors = "4.0.0"
 proc-macro2 = {version = "1.0.83", features = ["span-locations"]}
 regex = "1.10.4"
-serde = {version = "1.0.202", features = ["derive"]}
+serde = { version = "1.0.202", features = ["derive"] }
 serde_json = "1.0.117"
 supports-hyperlinks = "3.0.0"
