@@ -17,6 +17,28 @@ cargo install splint
 splint [-r <rules.json>] src/**/*.rs # Splint only works on rust files
 ```
 
+### Integration with Rust Analyzer
+Add the following to your `settings.json` file in vscode.  
+Add `-r <path>` if you have a non-standard rules file (see below).
+```jsonc
+{
+    // ...
+    "rust-analyzer.check.overrideCommand": [
+        "splint",
+        "-qa",
+        "**/*.rs"
+    ],
+    "rust-analyzer.cargo.buildScripts.overrideCommand": [
+    
+        "splint",
+        "-qa",
+        "**/*.rs"
+    ],
+    // ...
+}
+```
+
+
 ### Rules
 The following rule looks for a sequence of `.unwrap()` anywhere in the file.  
 You don't need to worry about whitespace, as it uses a parsed stream of tokens from proc_macro2.  
