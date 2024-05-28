@@ -2747,7 +2747,7 @@ dependencies = [
 
 [[package]]
 name = "splint"
-version = "0.2.0"
+version = "1.0.0"
 dependencies = [
  "cargo",
  "clap",
@@ -2760,6 +2760,7 @@ dependencies = [
  "serde",
  "serde_json",
  "supports-hyperlinks",
+ "toml",
 ]
 
 [[package]]

@@ -10,7 +10,7 @@ use crate::ty::Rules;
 mod compiler;
 pub mod ty;
 
-const RULES_FILES: [&str; 2] = ["splint.json", ".splint.json"];
+const RULES_FILES: [&str; 4] = ["splint.json", ".splint.json", "splint.toml", ".splint.toml"];
 
 #[derive(Parser, Debug, Clone)]
 #[command(
@@ -19,7 +19,7 @@ const RULES_FILES: [&str; 2] = ["splint.json", ".splint.json"];
     ignore_errors = true
 )]
 struct Args {
-    #[arg(short = 'r', help = "The rules to lint against (.json)")]
+    #[arg(short = 'r', help = "The rules to lint against (json|toml)")]
     rules: Option<String>,
     #[arg(name = "FILES", help = "The files to lint")]
     files: Vec<String>,
@@ -93,12 +93,15 @@ fn cli(args: Args) -> miette::Result<Vec<LintError>> {
             .to_string()
     });
 
-    let r: Rules = serde_json::from_str(
-        fs::read_to_string(rules_path)
-            .map_err(|e| miette!("Couldn't get rules: {:?}", e))?
-            .as_str(),
-    )
-    .map_err(|e| miette!("Couldn't parse rules: {:?}", e))?;
+    let r: Rules = {
+        let content = fs::read_to_string(rules_path.clone())
+            .map_err(|e| miette!("Couldn't read rules: {:?}", e))?;
+        if rules_path.ends_with(".toml") {
+            toml::from_str(&content).map_err(|e| miette!("Couldn't parse rules: {:?}", e))?
+        } else {
+            serde_json::from_str(&content).map_err(|e| miette!("Couldn't parse rules: {:?}", e))?
+        }
+    };
 
     let files = args.files.iter().flat_map(|loc| {
         if !loc.contains('*') {
@@ -133,7 +136,7 @@ fn cli(args: Args) -> miette::Result<Vec<LintError>> {
             )
         });
 
-    if !args.quiet {
+    if !(args.quiet || args.analyze) {
         println!(
             "{}, {}",
             format!("{fails} fails").red(),

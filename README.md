@@ -14,11 +14,11 @@
 cargo install splint
 
 # Run splint
-splint [-r <rules.json>] src/**/*.rs # Splint only works on rust files
+splint [-r <rules.(json|toml)>] src/**/*.rs # Splint only works on rust files
 ```
 
 ### Integration with Rust Analyzer
-Add the following to your `settings.json` file in vscode.  
+Add the following to your `settings.json` file in vscode or equivalent.  
 Add `-r <path>` if you have a non-standard rules file (see below).
 ```jsonc
 {
@@ -42,8 +42,9 @@ Add `-r <path>` if you have a non-standard rules file (see below).
 ### Rules
 The following rule looks for a sequence of `.unwrap()` anywhere in the file.  
 You don't need to worry about whitespace, as it uses a parsed stream of tokens from proc_macro2.  
-If no rules file is provided, splint will look for a `.splint.json` or `splint.json` file in the cwd.
+If no rules file is provided, splint will look for a `.splint.(json|toml)` or `splint.(json|toml)` file in the cwd.
 ```jsonc
+// JSON
 {
     "rules": {
         "Disallow Unwrap": {
@@ -52,10 +53,7 @@ If no rules file is provided, splint will look for a `.splint.json` or `splint.j
         /* (optional) Describe a fix or alternative */      "help": "Favour '?' for Results, or handling with unwrap_or(). At the least give some diagnostics with .expect()",
         /* (optional) Link to more information */           "more": "https://doc.rust-lang.org/std/result/enum.Result.html#method.unwrap",
         /* Whether or not this lint should panic*/          "fail": false,
-        /* The inclusive range highlighted */               "range": {
-        /* Pattern Index */                                     "start": 0,
-        /* Pattern Index */                                     "end": 3
-                                                            },
+        /* The inclusive range highlighted */               "range": [0, 3], // In this case . -> )
         /* Type/Value matching */                           "pattern": [
         /* Type is one of Punct/Ident/Delim */                  ["Punct", "."],
         /* Where Punctuation handles punctuation, */            ["Ident", "unwrap"],
@@ -65,6 +63,22 @@ If no rules file is provided, splint will look for a `.splint.json` or `splint.j
         }
     }
 }
+```
+
+```toml
+# TOML
+[rules."Disallow Unwrap"]
+name = "Disallow Unwrap"
+description = "`.unwrap()` should be discouraged where possible, as it leads to less than usefull panics."
+help = "Favour '?' for Results, or handling with unwrap_or(). At the least give some diagnostics with .expect()"
+fail = false
+range = [0, 3]
+pattern = [
+    ["Punct", "."],
+    ["Ident", "unwrap"],
+    ["Delim", "("],
+    ["Delim", ")"]
+]
 ```
 
 ### Thanks

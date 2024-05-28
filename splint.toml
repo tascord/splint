@@ -1,0 +1,7 @@
+[rules."Disallow Unwrap"]
+name = "Disallow Unwrap"
+description = "`.unwrap()` should be discouraged where possible, as it leads to less than usefull panics."
+help = "Favour '?' for Results, or handling with unwrap_or(). At the least give some diagnostics with .expect()"
+fail = false
+range = [0, 3]
+pattern = [["Punct", "."], ["Ident", "unwrap"], ["Delim", "("], ["Delim", ")"]]

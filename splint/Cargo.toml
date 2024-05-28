@@ -1,7 +1,7 @@
 [package]
 edition = "2021"
 name = "splint"
-version = "0.2.0"
+version = "1.0.0"
 license = "MIT"
 description = "Custom Rust Linting"
 repository = "https://github.com/tascord/splint"
@@ -26,3 +26,4 @@ regex = "1.10.4"
 serde = { version = "1.0.202", features = ["derive"] }
 serde_json = "1.0.117"
 supports-hyperlinks = "3.0.0"
+toml = "0.8.13"

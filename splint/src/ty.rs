@@ -8,7 +8,7 @@ use std::{
 
 use miette::{Diagnostic, LabeledSpan, NamedSource, SourceOffset, SourceSpan};
 use proc_macro2::{Delimiter, Span, TokenTree};
-use serde::{Deserialize, Serialize};
+use serde::{de, Deserialize, Serialize};
 
 #[derive(Clone)]
 pub struct Named(String, String, Arc<Span>);
@@ -109,6 +109,7 @@ pub struct Rule {
     pub name: String,
     pub description: String,
     pub help: Option<String>,
+    #[serde(deserialize_with = "deser_range_from_array")]
     pub range: RangeInclusive<usize>,
     pub pattern: Vec<Needle>,
     pub link: Option<String>,
@@ -231,4 +232,16 @@ pub fn span(c: String, s: Vec<Named>, r: RangeInclusive<usize>) -> SourceSpan {
         SourceOffset::from_location(c, lc.line, lc.column + 1),
         length,
     )
+}
+
+pub fn deser_range_from_array<'de, D>(deserializer: D) -> Result<RangeInclusive<usize>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let v: Vec<usize> = Vec::deserialize(deserializer)
+        .map_err(|_| de::Error::custom("Invalid range, expected 2 element array"))?;
+    if v.len() != 2 {
+        return Err(de::Error::custom("Invalid range, expected 2 element array"));
+    }
+    Ok(v[0]..=v[1])
 }
