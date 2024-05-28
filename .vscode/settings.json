@@ -1,0 +1,12 @@
+{
+    "rust-analyzer.check.overrideCommand": [
+        "splint",
+        "-qa",
+        "**/*.rs"
+    ],
+    "rust-analyzer.cargo.buildScripts.overrideCommand": [
+        "splint",
+        "-qa",
+        "**/*.rs"
+    ],
+}

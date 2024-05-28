@@ -1,14 +1,13 @@
 use clap::Parser;
 use itertools::Itertools;
-use miette::{bail, miette, NamedSource, Report};
+use miette::{bail, miette, Report};
 use owo_colors::OwoColorize;
 use proc_macro2::TokenTree;
 use std::{fs, io::Error, process::Command, str::FromStr, time::Instant};
-use ty::{LintError, Named, Rule};
+use ty::{LintError, Named};
 
 use crate::ty::Rules;
-mod compiler;
-pub mod ty;
+use splint::*;
 
 const RULES_FILES: [&str; 4] = ["splint.json", ".splint.json", "splint.toml", ".splint.toml"];
 
@@ -23,12 +22,7 @@ struct Args {
     rules: Option<String>,
     #[arg(name = "FILES", help = "The files to lint")]
     files: Vec<String>,
-    #[arg(
-        short = 'q',
-        default_value = "false",
-        help = "Quiet mode",
-        required = false
-    )]
+    #[arg(short = 'q', default_value = "false", help = "Quiet mode")]
     quiet: bool,
     #[arg(short = 'a', default_value = "false", help = "RustAnalyzer mode")]
     analyze: bool,
@@ -37,9 +31,10 @@ struct Args {
 pub fn main() {
     let args: Args = Args::parse();
     match cli(args.clone()) {
-        Ok(a) => {
+        Ok((violations, file_count, ms)) => {
             if args.analyze {
-                a.into_iter()
+                violations
+                    .into_iter()
                     .map(|e| serde_json::to_string(&e.json_diagnostic()).unwrap())
                     .for_each(|f| {
                         println!("{}", f);
@@ -56,26 +51,37 @@ pub fn main() {
 
                 std::process::exit(0);
             } else {
-                let fail = a.iter().any(|a| a.fails);
-                a.into_iter().map(Report::new).for_each(|r| {
-                    eprintln!("{r:?}");
-                });
+                let fails = violations.iter().filter(|a| a.fails);
+                if !args.quiet {
+                    violations
+                        .clone()
+                        .into_iter()
+                        .map(Report::new)
+                        .for_each(|r| {
+                            eprintln!("{r:?}");
+                        });
 
-                if fail {
+                    println!(
+                        "{}, {}",
+                        format!("{} fails", fails.clone().count()).red(),
+                        format!("{} warnings", violations.len()).yellow()
+                    );
+                    println!("Finished linting {} files in {}ms", file_count, ms);
+                }
+
+                if fails.count() > 0 {
                     std::process::exit(1);
                 }
             }
         }
         Err(e) => {
-            if !args.quiet {
-                eprintln!("{e:?}");
-                std::process::exit(1);
-            }
+            eprintln!("{e:?}");
+            std::process::exit(1);
         }
     }
 }
 
-fn cli(args: Args) -> miette::Result<Vec<LintError>> {
+fn cli(args: Args) -> miette::Result<(Vec<LintError>, usize, u128)> {
     let rules_path = args.rules.unwrap_or_else(|| {
         let path = std::env::current_dir().unwrap();
         RULES_FILES
@@ -119,40 +125,20 @@ fn cli(args: Args) -> miette::Result<Vec<LintError>> {
         bail!(miette!("No files provided."))
     }
 
-    let s = Instant::now();
-    let (violations, total, fails) = files
-        .map(|loc| lint(loc, r.clone()))
-        .try_collect::<(Vec<LintError>, usize), Vec<_>, std::io::Error>()
-        .map_err(|e| miette!("Couldn't read source file: {:?}", e))?
+    let s: Instant = Instant::now();
+    let violations = files
+        .clone()
+        .map(|f| lint(f, r.clone()))
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| miette!("Error linting files: {:?}", e))?
         .into_iter()
-        .fold((Vec::new(), 0, 0), |mut a, b| {
-            (
-                {
-                    a.0.extend(b.0.clone());
-                    a.0
-                },
-                a.1 + b.0.len(),
-                a.2 + b.1,
-            )
-        });
+        .flatten()
+        .collect_vec();
 
-    if !(args.quiet || args.analyze) {
-        println!(
-            "{}, {}",
-            format!("{fails} fails").red(),
-            format!("{} warnings", total - fails).yellow()
-        );
-        println!(
-            "Finished linting {} files in {}ms",
-            total,
-            s.elapsed().as_millis(),
-        );
-    }
-
-    Ok(violations)
+    Ok((violations, files.count(), s.elapsed().as_millis()))
 }
 
-pub fn lint(loc: String, rules: Rules) -> Result<(Vec<LintError>, usize), Error> {
+pub fn lint(loc: String, rules: Rules) -> Result<Vec<LintError>, Error> {
     let input = fs::read_to_string(loc.clone())?;
     let token_tree = proc_macro2::TokenStream::from_str(&input).unwrap();
     let named = token_tree
@@ -180,76 +166,4 @@ fn parse(tt: TokenTree) -> Vec<Named> {
         }
         _ => vec![tt.into()],
     }
-}
-
-fn walk(r: Rule, s: &Vec<Named>) -> Vec<(Rule, Vec<Named>)> {
-    let mut out = Vec::new();
-    if s.len() < r.pattern.len() {
-        return out;
-    }
-
-    match r.test(s) {
-        Ok(_) => {}
-        Err(e) => {
-            out.push((r.clone(), e.clone()));
-
-            let line = e.last().unwrap().span().end().line;
-            let col = e.last().unwrap().span().end().column;
-
-            let more = s
-                .iter()
-                .skip_while(|v| {
-                    let span_line = v.span().start().line;
-                    if span_line < line {
-                        return true;
-                    }
-
-                    if span_line == line {
-                        return v.span().start().column < col;
-                    }
-
-                    false
-                })
-                .map(|v| v.clone());
-
-            out.extend(walk(r.clone(), &more.clone().collect()));
-        }
-    }
-
-    out
-}
-
-fn test(r: Rules, s: Vec<Named>, source: String, file: String) -> (Vec<LintError>, usize) {
-    let any = r
-        .rules
-        .iter()
-        .flat_map(|(_, v)| walk(v.clone(), &s))
-        .collect::<Vec<_>>();
-
-    let errors = any.iter().map(|(n, r)| LintError {
-        window: r.clone(),
-        fails: n.fails,
-        rule: n.clone(),
-        line: (
-            source
-                .lines()
-                .nth(r.clone().first().unwrap().span().start().line - 1)
-                .unwrap_or_default()
-                .to_string(),
-            // find chars before line
-            source
-                .lines()
-                .enumerate()
-                .filter(|(i, _)| *i < r.clone().first().unwrap().span().start().line - 1)
-                .map(|(_, l)| l.chars().count())
-                .reduce(|a, b| a + b)
-                .unwrap_or_default(),
-        ),
-        source: NamedSource::new(&file, source.clone()),
-    });
-
-    (
-        errors.collect::<Vec<_>>(),
-        any.iter().filter(|a| a.0.fails).count(),
-    )
 }

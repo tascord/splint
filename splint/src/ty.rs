@@ -115,6 +115,7 @@ pub struct Rule {
     pub link: Option<String>,
     #[serde(default)]
     pub fails: bool,
+    pub replace: Option<String>,
 }
 
 impl Rule {
@@ -156,6 +157,31 @@ pub struct LintError {
     pub source: NamedSource<String>,
 }
 
+impl LintError {
+    pub fn help(&self) -> Option<String> {
+        let h = self.rule.help.clone();
+        let r = match self.rule.replace.clone() {
+            Some(r) => format!(
+                "Try replacing '{}' with '{r}'",
+                self.window
+                    .iter()
+                    .map(|v| v.clone().1)
+                    .collect::<Vec<_>>()
+                    .join("")
+            ),
+            None => String::new(),
+        };
+
+        if let Some(h) = h {
+            Some(format!("{}\n{}", h, r))
+        } else if !r.is_empty() {
+            Some(r)
+        } else {
+            None
+        }
+    }
+}
+
 impl Display for LintError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(&format!("{}: {}", self.rule.name, self.rule.description))
@@ -176,7 +202,7 @@ impl Diagnostic for LintError {
     }
 
     fn help<'a>(&'a self) -> Option<Box<dyn std::fmt::Display + 'a>> {
-        if let Some(v) = &self.rule.help {
+        if let Some(v) = &self.help() {
             Some(Box::new(v.clone()))
         } else {
             None

@@ -1,8 +1,13 @@
 <div align="center">
     <img src="./assets/splint.png" width="300px"/>
     <div>
-    <a href="https://crates.io/crates/splint"><img alt="Crates.io Version" src="https://img.shields.io/crates/v/splint?style=for-the-badge"></a>
-    <a href="https://docs.rs/splint"><img alt="docs.rs" src="https://img.shields.io/docsrs/splint?style=for-the-badge"></a>    
+        <img height="35" alt="Powered: by Black Magic" src="https://forthebadge.com/images/badges/powered-by-black-magic.svg">
+        <a href="https://crates.io/crates/splint">
+            <img height="35" alt="Crates.io Version" src="https://img.shields.io/crates/v/splint?style=for-the-badge">
+        </a>
+        <a href="https://github.com/tascord/splint/actions">
+            <img height="35" alt="GitHub Actions Workflow Status" src="https://img.shields.io/github/actions/workflow/status/tascord/splint/rust.yml?style=for-the-badge">
+        </a>
     </div>
     <br/>
     <h1>Custom Rust Linting</h1>
@@ -52,7 +57,8 @@ If no rules file is provided, splint will look for a `.splint.(json|toml)` or `s
         /* Reasoning for the lint */                        "description": "`.unwrap()` should be discouraged where possible, as it leads to less than usefull panics.",
         /* (optional) Describe a fix or alternative */      "help": "Favour '?' for Results, or handling with unwrap_or(). At the least give some diagnostics with .expect()",
         /* (optional) Link to more information */           "more": "https://doc.rust-lang.org/std/result/enum.Result.html#method.unwrap",
-        /* Whether or not this lint should panic*/          "fail": false,
+        /* Whether or not this lint should panic*/          "fails": false,
+        /* A replacement for the match */                   "replace": ".expect(\"...\")",
         /* The inclusive range highlighted */               "range": [0, 3], // In this case . -> )
         /* Type/Value matching */                           "pattern": [
         /* Type is one of Punct/Ident/Delim */                  ["Punct", "."],
@@ -71,7 +77,7 @@ If no rules file is provided, splint will look for a `.splint.(json|toml)` or `s
 name = "Disallow Unwrap"
 description = "`.unwrap()` should be discouraged where possible, as it leads to less than usefull panics."
 help = "Favour '?' for Results, or handling with unwrap_or(). At the least give some diagnostics with .expect()"
-fail = false
+fails = false
 range = [0, 3]
 pattern = [
     ["Punct", "."],
